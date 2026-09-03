@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 — 2026-09-03
+
+No code changes. First release published by the GitHub Actions workflow through
+npm trusted publishing (OIDC, with provenance); 0.1.0 was published by hand.
+
 ## 0.1.0 — 2026-09-03
 
 First release. An npm package, because Hexo users already have Node. HTML is
