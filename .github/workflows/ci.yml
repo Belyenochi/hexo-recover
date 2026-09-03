@@ -11,7 +11,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18, 20, 22, 24]
+        # cheerio 1.2 (via undici) needs the File global that arrived in Node 20;
+        # Node 18 is end-of-life anyway.
+        node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -12,7 +12,7 @@
   "bin": { "hexo-recover": "src/cli.js" },
   "exports": "./src/index.js",
   "files": ["src/", "README.md", "CHANGELOG.md", "LICENSE"],
-  "engines": { "node": ">=18" },
+  "engines": { "node": ">=20" },
   "scripts": {
     "test": "node --test",
     "parity": "node scripts/parity.js"

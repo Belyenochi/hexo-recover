@@ -7,7 +7,7 @@ from hexo_recover.convert import Converter
 
 
 def md(html: str) -> str:
-    soup = BeautifulSoup(f'<div class="post-body">{html}</div>', "lxml")
+    soup = BeautifulSoup(f'<div class="post-body">{html}</div>', "html5lib")
     return Converter().convert(soup.select_one(".post-body"))
 
 
