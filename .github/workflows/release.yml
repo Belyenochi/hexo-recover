@@ -36,5 +36,9 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1; the npm bundled with Node 22 is
+      # 10.x, and with it `npm publish` fails as "404 Not Found - PUT" because
+      # no OIDC token exchange ever happens.
+      - run: npm install -g npm@latest && npm --version
       - run: npm ci
       - run: npm publish --provenance --access public
