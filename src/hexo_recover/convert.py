@@ -13,6 +13,7 @@ matched. Comments say which rule fixed which failure.
 """
 import html
 import re
+import unicodedata
 
 from bs4 import NavigableString, Tag
 
@@ -235,21 +236,40 @@ class Converter:
             return self.block(n)
         return self.inline_children(n)
 
+    @staticmethod
+    def _is_punct(ch: str) -> bool:
+        # CommonMark's "punctuation character": ASCII punctuation or any Unicode
+        # P* category -- which includes ，。（）【】 and friends, the characters
+        # that actually surround emphasis in Chinese prose.
+        return bool(ch) and (ch in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" or unicodedata.category(ch).startswith("P"))
+
     def emphasis(self, n, marks: str, tag: str) -> str:
-        """`**text**` -- unless the text begins with punctuation and the run is
-        glued to a word on the left, e.g. 为何物**[本篇]**. CommonMark then says
-        the opening `**` is not left-flanking and refuses to open emphasis;
-        old marked did not care, the current one follows the spec. An HTML tag
-        says the same thing in both and keeps the text byte-identical."""
+        """`**text**` when CommonMark will accept it; an HTML tag otherwise.
+
+        The delimiter run has to be left-flanking to open and right-flanking to
+        close, and prose in Chinese trips both rules constantly: 为何物**[本篇]**
+        (opener followed by punctuation but preceded by a word), and
+        **加粗**（注） (closer followed by a word... or preceded by punctuation
+        and followed by more). The old marked ignored the rules; the current one
+        follows them and prints the asterisks. The HTML tag says the same thing
+        in both and keeps the text byte-identical, so it is used exactly when the
+        Markdown form would not render."""
         inner = self.inline_children(n).strip()
         if not inner:
             return ""
-        prev = n.previous_sibling
-        glued_left = (isinstance(prev, NavigableString) and str(prev)[-1:].strip() != ""
-                      and not self._PUNCT_START.match(str(prev)[-1:]))
-        if glued_left and self._PUNCT_START.match(inner):
-            return f"<{tag}>{inner}</{tag}>"
-        return f"{marks}{inner}{marks}"
+        prev, nxt = n.previous_sibling, n.next_sibling
+        before = str(prev)[-1:] if isinstance(prev, NavigableString) else ""
+        after = str(nxt)[:1] if isinstance(nxt, NavigableString) else ""
+        first, last = inner[0], inner[-1]
+        # left-flanking: not followed by whitespace, and (not followed by
+        # punctuation, or preceded by whitespace/punctuation/start)
+        can_open = not first.isspace() and (not self._is_punct(first) or before == "" or before.isspace() or self._is_punct(before))
+        # right-flanking: not preceded by whitespace, and (not preceded by
+        # punctuation, or followed by whitespace/punctuation/end)
+        can_close = not last.isspace() and (not self._is_punct(last) or after == "" or after.isspace() or self._is_punct(after))
+        if can_open and can_close:
+            return f"{marks}{inner}{marks}"
+        return f"<{tag}>{inner}</{tag}>"
 
     @staticmethod
     def img(n) -> str:

@@ -50,9 +50,15 @@ def test_tilde_uses_entity():
     assert md("<p>hi~ there~</p>") == "hi&#126; there&#126;\n"
 
 
-def test_emphasis_glued_to_word_uses_html_tag():
+def test_emphasis_uses_html_tag_when_commonmark_would_not_open_or_close():
+    # opener followed by punctuation, preceded by a word: cannot open
     assert md("<p>为何物<strong>[本篇]</strong></p>") == "为何物<strong>\\[本篇\\]</strong>\n"
+    # closer preceded by punctuation 】, followed by a word: cannot close
+    assert md("<p><strong>【英雄难度】</strong>parser</p>") == "<strong>【英雄难度】</strong>parser\n"
+    # both flanks fine: plain Markdown, including CJK punctuation on the outside
     assert md("<p>a <strong>bold</strong> word</p>") == "a **bold** word\n"
+    assert md("<p>说，<strong>基本原则</strong>是少</p>") == "说，**基本原则**是少\n"
+    assert md("<p><strong>【英雄难度】</strong> parser</p>") == "**【英雄难度】** parser\n"
 
 
 def test_image_space_percent_encoded():
