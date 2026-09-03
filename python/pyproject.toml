@@ -19,7 +19,10 @@ classifiers = [
 ]
 dependencies = [
   "beautifulsoup4>=4.12",
-  "lxml>=5.0",
+  # html5lib, not lxml: it builds the tree the way a browser (and the JavaScript
+  # implementation's parse5) does. lxml does not know HTML5's <figure> and left
+  # it inside an unclosed <p>, which changed five posts' output.
+  "html5lib>=1.1",
 ]
 
 [project.optional-dependencies]

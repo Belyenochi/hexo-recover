@@ -11,7 +11,6 @@ The rules here were each earned against a real 25-post site, rendered back
 through Hexo and diffed against the original HTML until every article body
 matched. Comments say which rule fixed which failure.
 """
-import html
 import re
 import unicodedata
 
@@ -67,7 +66,7 @@ class Converter:
             # marked emits for an INDENTED code block; Hexo only runs the
             # highlighter on fenced ones. Re-emit it indented so the re-render
             # is a bare <pre> too, not a highlight table.
-            code = html.unescape(n.get_text()).rstrip("\n")
+            code = n.get_text().rstrip("\n")
             return "\n".join("    " + ln if ln else "" for ln in code.split("\n")) + "\n\n"
         if name in ("ul", "ol"):
             return self.list(n, ordered=(name == "ol"), depth=0) + "\n"
@@ -114,8 +113,8 @@ class Converter:
 
     @staticmethod
     def raw_text(node) -> str:
-        # Code must not be Markdown-escaped; only entity-decoded.
-        return html.unescape(node.get_text())
+        # Code must not be Markdown-escaped. Entities were decoded at parse time.
+        return node.get_text()
 
     def list(self, lst, ordered, depth) -> str:
         """Each <li> becomes one or more lines. Inline runs are joined into the
@@ -223,7 +222,7 @@ class Converter:
         if name in ("del", "s"):
             return "~~" + self.inline_children(n).strip() + "~~"
         if name == "code":
-            t = html.unescape(n.get_text())
+            t = n.get_text()
             fence = "`" * (max([len(m) for m in re.findall(r"`+", t)] + [0]) + 1)
             return f"{fence}{t}{fence}"
         if name == "br":
@@ -280,7 +279,7 @@ class Converter:
         return f"![{alt}]({src})"
 
     def text(self, s) -> str:
-        t = html.unescape(str(s))
+        t = str(s)
         t = re.sub(r"[ \t\r\f\v]+", " ", t).replace("\n", " ")
         t = self._INLINE_ESC.sub(r"\\\1", t)
         return t.replace("~", "&#126;")

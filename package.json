@@ -1,0 +1,23 @@
+{
+  "name": "hexo-recover",
+  "version": "0.1.0",
+  "description": "Rebuild the Markdown sources of a Hexo blog from its generated HTML, and prove the rebuild is faithful.",
+  "keywords": ["hexo", "blog", "markdown", "recovery", "html-to-markdown", "next-theme"],
+  "license": "MIT",
+  "author": "Jason Zhu",
+  "repository": { "type": "git", "url": "git+https://github.com/Belyenochi/hexo-recover.git" },
+  "homepage": "https://github.com/Belyenochi/hexo-recover#readme",
+  "bugs": "https://github.com/Belyenochi/hexo-recover/issues",
+  "type": "module",
+  "bin": { "hexo-recover": "src/cli.js" },
+  "exports": "./src/index.js",
+  "files": ["src/", "README.md", "CHANGELOG.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test",
+    "parity": "node scripts/parity.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
+  }
+}

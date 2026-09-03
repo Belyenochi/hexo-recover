@@ -15,7 +15,6 @@ Three measures per post:
            a content difference
 """
 import difflib
-import html
 import re
 from pathlib import Path
 
@@ -26,7 +25,7 @@ TAGS = ["h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "table", "img", "a
 
 
 def _body(p: Path, selector: str):
-    return BeautifulSoup(p.read_text(encoding="utf-8"), "lxml").select_one(selector)
+    return BeautifulSoup(p.read_text(encoding="utf-8"), "html5lib").select_one(selector)
 
 
 def _text(el) -> str:
@@ -34,7 +33,7 @@ def _text(el) -> str:
         b.decompose()
     for g in el.select("td.gutter"):
         g.decompose()
-    return re.sub(r"\s+", " ", html.unescape(el.get_text(" "))).strip()
+    return re.sub(r"\s+", " ", el.get_text(" ")).strip()
 
 
 def _struct(el):

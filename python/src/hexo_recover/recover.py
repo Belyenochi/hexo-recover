@@ -45,7 +45,7 @@ class Options:
 
 
 def soup_of(p: Path) -> BeautifulSoup:
-    return BeautifulSoup(p.read_text(encoding="utf-8"), "lxml")
+    return BeautifulSoup(p.read_text(encoding="utf-8"), "html5lib")
 
 
 def parse_post(path: Path, rel: str, sel: Selectors):
@@ -97,7 +97,7 @@ def write_post(post, dest: Path):
 def site_facts(deploy: Path, sel: Selectors):
     """Everything about the site that leaves a trace in the generated HTML."""
     index = deploy / "index.html"
-    soup = soup_of(index) if index.exists() else BeautifulSoup("", "lxml")
+    soup = soup_of(index) if index.exists() else BeautifulSoup("", "html5lib")
 
     def g(css, attr=None):
         e = soup.select_one(css)

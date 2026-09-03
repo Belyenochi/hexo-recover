@@ -2,7 +2,12 @@
 
 ## 0.1.0 — 2026-09-03
 
-First release. Extracted from the script that recovered a 25-post NexT blog
+First release, as an npm package (primary: Hexo users have Node) and a Python
+package with identical behaviour. A parity check in CI runs both on the same
+site and requires byte-identical Markdown and config output. Both parse HTML
+per the HTML5 algorithm (parse5 / html5lib), so a block element inside an
+unclosed `<p>` — which hexo-renderer-marked does emit — is handled the way a
+browser renders it. Extracted from the script that recovered a 25-post NexT blog
 whose Markdown had been lost, generalised, and verified by rendering the
 result back through Hexo 8 + NexT 8 and diffing against the original: 24/24
 posts identical once spaces are removed, no structural differences.

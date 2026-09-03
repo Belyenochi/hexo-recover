@@ -1,15 +1,13 @@
-# Publishes to PyPI when a v* tag is pushed, using PyPI Trusted Publishing:
-# the job gets a short-lived OIDC token from GitHub and PyPI accepts it because
-# this repository + workflow are registered as a publisher for the project.
-# No API token is stored anywhere.
+# Publishes on a v* tag: the npm package (primary -- Hexo users have Node) and
+# the Python package. Both use OIDC "trusted publishing"; no token is stored.
 #
-# One-time setup on pypi.org (Your projects -> Publishing, or "Add a pending
-# publisher" before the first release):
-#   PyPI project name : hexo-recover
-#   Owner             : Belyenochi
-#   Repository name   : hexo-recover
-#   Workflow name     : release.yml
-#   Environment name  : pypi
+# One-time setup:
+#   npm : the package must exist first (the initial `npm publish` is done by
+#         hand); then npmjs.com -> package -> Settings -> Trusted publisher:
+#         GitHub Actions, repo Belyenochi/hexo-recover, workflow release.yml.
+#   PyPI: pypi.org -> Publishing -> add pending publisher for project
+#         hexo-recover: owner Belyenochi, repo hexo-recover, workflow
+#         release.yml, environment pypi.
 name: Release
 
 on:
@@ -17,32 +15,50 @@ on:
     tags: ["v*"]
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --extra dev
-      - run: uv run pytest -q
-      - name: tag must match the package version
-        run: |
-          v=$(uv run python -c "import hexo_recover; print(hexo_recover.__version__)")
-          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != package version v$v"; exit 1; }
-      - run: uv build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v4
         with:
-          name: dist
-          path: dist/
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci && npm test
+      - run: cd python && uv sync --extra dev && uv run pytest -q
+      - name: tag must match both package versions
+        run: |
+          js=$(node -p "require('./package.json').version")
+          py=$(cd python && uv run python -c "import hexo_recover; print(hexo_recover.__version__)")
+          [ "v$js" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package.json v$js"; exit 1; }
+          [ "$js" = "$py" ] || { echo "package.json $js != python $py"; exit 1; }
 
-  publish:
-    needs: build
+  npm:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm publish --provenance --access public
+
+  pypi:
+    needs: check
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: cd python && uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: python/dist/
