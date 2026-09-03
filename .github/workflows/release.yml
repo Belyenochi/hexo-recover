@@ -1,0 +1,48 @@
+# Publishes to PyPI when a v* tag is pushed, using PyPI Trusted Publishing:
+# the job gets a short-lived OIDC token from GitHub and PyPI accepts it because
+# this repository + workflow are registered as a publisher for the project.
+# No API token is stored anywhere.
+#
+# One-time setup on pypi.org (Your projects -> Publishing, or "Add a pending
+# publisher" before the first release):
+#   PyPI project name : hexo-recover
+#   Owner             : Belyenochi
+#   Repository name   : hexo-recover
+#   Workflow name     : release.yml
+#   Environment name  : pypi
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+      - run: uv run pytest -q
+      - name: tag must match the package version
+        run: |
+          v=$(uv run python -c "import hexo_recover; print(hexo_recover.__version__)")
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != package version v$v"; exit 1; }
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

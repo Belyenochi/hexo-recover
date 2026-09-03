@@ -1,8 +1,9 @@
 import argparse
 import sys
+from dataclasses import replace
 
 from . import __version__
-from .recover import Options, Selectors, recover
+from .recover import THEME_PRESETS, Options, recover
 from .verify import verify
 
 
@@ -29,8 +30,11 @@ def main(argv=None) -> int:
                    help="post path (YYYY/MM/DD/slug) to write under _private/ instead of source/_posts/; repeatable")
     r.add_argument("--drop", action="append", metavar="PATH[=WHY]",
                    help="post path to leave out entirely; repeatable")
-    r.add_argument("--body-selector", default=".post-body", help="CSS selector of the article body (NexT: .post-body)")
-    r.add_argument("--title-selector", default=".post-title", help="CSS selector of the article title")
+    r.add_argument("--theme", choices=sorted(THEME_PRESETS), default="next",
+                   help="selector preset for the theme's post markup (default: next)")
+    r.add_argument("--body-selector", help="CSS selector of the article body; overrides the preset")
+    r.add_argument("--title-selector", help="CSS selector of the article title; overrides the preset")
+    r.add_argument("--post-glob", help="glob for post pages relative to SITE (default: YYYY/MM/DD/slug/index.html)")
 
     v = sub.add_parser("verify", help="compare a regenerated site with the original, post by post")
     v.add_argument("original", help="the original generated site")
@@ -39,8 +43,14 @@ def main(argv=None) -> int:
 
     a = ap.parse_args(argv)
     if a.cmd == "recover":
-        opt = Options(url=a.url, private=_kv(a.private), drop=_kv(a.drop),
-                      selectors=Selectors(body=a.body_selector, title=a.title_selector))
+        sel = replace(THEME_PRESETS[a.theme])
+        if a.body_selector:
+            sel.body = a.body_selector
+        if a.title_selector:
+            sel.title = a.title_selector
+        opt = Options(url=a.url, private=_kv(a.private), drop=_kv(a.drop), selectors=sel)
+        if a.post_glob:
+            opt.post_glob = a.post_glob
         rep = recover(a.site, a.out, opt)
         f = rep["site"]
         print(f"public posts : {len(rep['public'])}")

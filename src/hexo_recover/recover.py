@@ -27,6 +27,14 @@ class Selectors:
     index_title_link: str = ".post-title-link, .post-title a"
 
 
+THEME_PRESETS = {
+    "next": Selectors(),
+    "landscape": Selectors(body=".article-entry", title=".article-title", meta_time=".article-meta time",
+                           categories=".article-category-link", tags=".article-tag-list-link",
+                           index_article="article", index_title_link=".article-title"),
+}
+
+
 @dataclass
 class Options:
     url: Optional[str] = None

@@ -1,97 +1,86 @@
 # hexo-recover
 
-Rebuild the Markdown sources of a [Hexo](https://hexo.io) blog from its generated
-HTML — and prove the rebuild is faithful by rendering it back and diffing.
+[![PyPI](https://img.shields.io/pypi/v/hexo-recover.svg)](https://pypi.org/project/hexo-recover/)
+[![CI](https://github.com/Belyenochi/hexo-recover/actions/workflows/ci.yml/badge.svg)](https://github.com/Belyenochi/hexo-recover/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-You have `public/` (or the `.deploy_git` folder Hexo leaves behind, or the
-`username.github.io` repo). You do not have `source/`. This gets it back.
+Get the Markdown sources of a [Hexo](https://hexo.io) blog back from its generated HTML.
+
+## When you need this
+
+You have the published site — the `public/` folder, the `.deploy_git` folder
+Hexo leaves behind, or the `username.github.io` repository — and the `source/`
+folder with the Markdown is gone. Laptop died, repo was never pushed, backup
+turned out to hold only a fresh `hexo init`. Rewriting posts by hand from the
+rendered pages is slow and loses code blocks, tables and list structure.
+
+`hexo-recover` converts every post page back into Markdown with its front
+matter, copies the images, reconstructs the site and theme config from what the
+pages reveal, and gives you a `verify` command that renders the result back
+through Hexo and diffs it against the original so you know nothing was lost.
+
+## Usage
 
 ```sh
 pip install hexo-recover
 
-hexo-recover recover ./belyenochi.github.io ./blog --url https://belyenochi.github.io
+# 1. generated site -> Hexo project
+hexo-recover recover ./my-site-html ./blog --url https://you.github.io
+
+# 2. build it
 cd blog && npm install && npx hexo generate
-hexo-recover verify ../belyenochi.github.io ./public
+
+# 3. prove it matches the original
+hexo-recover verify ../my-site-html ./public
 ```
 
-## What you get
+Step 1 writes:
 
 ```
 blog/
-  _config.yml          Hexo 8 site config; title/author/language/permalink/search read from the HTML
-  _config.next.yml     NexT 8 theme config; menu, social links, avatar, excerpts, counters read from the HTML
-  package.json         Hexo 8 + NexT 8 + the plugins the site evidently used
-  source/_posts/*.md   one file per post, with title / date / categories / tags front matter
+  _config.yml          Hexo 8 site config — title, author, language, permalink shape read from the pages
+  _config.next.yml     NexT 8 theme config — menu, social links, avatar, excerpt length, counters
+  package.json         Hexo 8, NexT 8 and the plugins the site evidently used
+  source/_posts/*.md   one file per post: title / date / categories / tags + body
   source/images/       copied
-  source/about/        if the site had one
-  source/tags/  source/categories/   the index pages NexT needs
-  RECOVERY-REPORT.json per-post inventory
+  source/about/, source/tags/, source/categories/
+  RECOVERY-REPORT.json what was recovered, what was skipped, and why
 ```
 
-Posts you do not want back online go to `_private/` (gitignored) with
-`--private PATH=reason`, or nowhere at all with `--drop PATH=reason`. Both are
-recorded in the report so the decision is on file.
+Step 3 exits 0 only when every post body is identical to the original once
+spaces are removed and every structural tag count (headings, lists, tables,
+images, links, code blocks, emphasis) matches.
 
-## Why not a generic HTML→Markdown converter
+### Options
 
-Because they break exactly the things a Hexo site is made of. Each rule below
-was found by rendering the recovered Markdown back through Hexo and diffing
-against the original until every post matched:
+| flag | |
+|---|---|
+| `--url URL` | site URL for `_config.yml` (default: `<link rel=canonical>` if present) |
+| `--private PATH=WHY` | write this post to `_private/` (gitignored) instead of publishing it; repeatable |
+| `--drop PATH=WHY` | leave this post out entirely; repeatable |
+| `--theme next\|landscape` | selector preset for the theme's post markup (default `next`) |
+| `--body-selector` / `--title-selector` | override the preset for another theme |
+| `--post-glob` | where post pages live (default `YYYY/MM/DD/slug/index.html`) |
 
-| the markup | what a generic tool does | what this does |
-|---|---|---|
-| code as a `<table>` with a line-number gutter (`figure.highlight`) | numbers interleaved with code, or a Markdown table | reassemble lines from `span.line`, fence with the language |
-| bare `<pre><code>` (indented code in the source, never highlighted) | a fence, which Hexo then highlights | 4-space indent, so it stays plain |
-| heading anchors `<a class="headerlink">` | `[](#anchor)` litter | dropped |
-| `<li><h5>` — a heading inside a list item | `- ##### text` on one line: hashes become text | heading on its own indented line |
-| `<br>` inside a list item | continuation line un-indented: the list splits | indented continuation |
-| `*`, `_`, `###`, `1.` that are literal in the text | left alone, so they become emphasis/headings/lists | escaped — but not inside headings, where `1. 前言` cannot be a list |
-| `~` in prose | `\~` (old marked prints the backslash) or a strikethrough pair (new marked) | `&#126;` |
-| `**[text]**` glued to a word | CommonMark refuses to open emphasis; asterisks print | `<strong>` |
-| image file names with spaces | broken link | `%20` |
-| bare text nodes outside `<p>` | lost or glued to the previous heading | a paragraph |
+`PATH` is the post's URL path, e.g. `2021/05/19/love`. Both lists end up in the
+report, so the decision to leave something out is on file.
 
-Everything else — headings, paragraphs, nested lists, tables, blockquotes,
-links, images, inline code, emphasis — is straightforward and handled.
+## What it gets right that generic HTML→Markdown tools do not
 
-## Site settings recovered from the HTML
+Hexo renders code as a `<table>` with a line-number gutter; headings carry
+anchor links; headings and hard breaks appear inside list items; `*`, `_`,
+`###`, `1.` and `~` occur as literal text; CommonMark refuses emphasis that old
+renderers accepted. Each of these is handled, and each rule is pinned by a unit
+test. The converter escapes only what would change meaning, so the recovered
+Markdown stays pleasant to edit — which is the point of recovering it.
 
-Nothing here is guessed from a template; each is read off the pages:
+## Limits
 
-- title, author, language, avatar, description
-- menu items and social links (NexT 5 markup and NexT 8 markup both)
-- whether a `search.xml` was shipped → `hexo-generator-searchdb` + `local_search`
-- whether the busuanzi counter was loaded → `busuanzi_count`
-- **excerpt length**: the median length of the excerpts on the index pages,
-  rounded to 10. NexT 5 cut at 150 by default and NexT 8 removed the feature;
-  `hexo-auto-excerpt` with that length reproduces the index without a
-  `<!-- more -->` in any post
-
-## Verification
-
-`hexo-recover verify ORIGINAL REGENERATED` compares every post's body:
-
-- `ratio` — difflib similarity of visible text (gutters and read-more buttons
-  removed, whitespace collapsed)
-- `nospace` — identical once spaces are removed; the remaining differences are
-  spaces around inline elements, which Markdown cannot always reproduce and
-  which do not render
-- structural tag counts (h1–h6, lists, tables, images, links, code figures,
-  emphasis, blockquotes) must match exactly; `<p>` is excluded because bare text
-  nodes become paragraphs
-
-Exit code 0 only when every post is identical no-space and no structure
-differs. On the 25-post site this was written for, that is the result on both
-the original toolchain (Hexo 3.9, NexT 5.1.4) and the current one (Hexo 8,
-NexT 8).
-
-## Other themes
-
-The converter is generic to Hexo's own markup (code figures come from Hexo, not
-the theme). The selectors for the article body and title default to NexT's
-(`.post-body`, `.post-title`); pass `--body-selector` / `--title-selector` for
-another theme, e.g. landscape uses `.article-entry` / `.article-title`. Menu and
-social extraction currently understands NexT's sidebar only.
+- Menu and social-link extraction understands the NexT sidebar; other themes
+  get correct posts and a default theme config.
+- Posts are found by the date-based permalink shape unless `--post-glob` says
+  otherwise.
+- `verify` needs the rebuilt site; it does not run Hexo for you.
 
 ## Development
 
