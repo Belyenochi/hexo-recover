@@ -6,9 +6,8 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/hexo-recover"><img alt="npm version" src="https://img.shields.io/npm/v/hexo-recover.svg?color=cb3837&logo=npm"></a>
-  <a href="https://www.npmjs.com/package/hexo-recover"><img alt="npm downloads" src="https://img.shields.io/npm/dm/hexo-recover.svg"></a>
   <a href="https://github.com/Belyenochi/hexo-recover/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Belyenochi/hexo-recover/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="node >= 20" src="https://img.shields.io/node/v/hexo-recover.svg?logo=node.js">
+  <img alt="node 20 or newer" src="https://img.shields.io/node/v/hexo-recover.svg?logo=node.js">
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
@@ -40,47 +39,15 @@ Requires Node ≥ 20.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["generated site<br/>public/ · .deploy_git/ · user.github.io"] -->|"hexo-recover recover"| B["Hexo project<br/>source/_posts/*.md<br/>_config.yml · _config.next.yml"]
-    B -->|"hexo generate"| C["public/"]
-    A -.->|"hexo-recover verify"| D{"same article<br/>bodies?"}
-    C -.-> D
-```
+<p align="center"><img alt="recover, generate, verify" src="docs/flow.svg" width="900"></p>
 
-`verify` compares every post body of the rebuilt site with the original and
-exits 0 only when the text is identical (ignoring spaces) **and** every
-structural tag count — headings, lists, tables, images, links, code blocks,
-emphasis — matches.
-
-## Why this works
-
-**Hexo's output is a deterministic function of the Markdown.** `marked` turns
-each Markdown construct into a fixed HTML shape, and the theme wraps it in a
-fixed set of containers. Nothing about the post's *structure* is thrown away
-on the way out, so it can be read back in — provided the converter knows the
-exact shapes Hexo and NexT produce rather than HTML in general. That is the
-whole trick: `figure.highlight > table > td.code > span.line` is a fenced code
-block, `<a class="headerlink">` inside a heading is not a link, `<li><h5>` is a
-heading that has to go on its own line.
-
-**You do not have to trust it; you can measure it.** Render the recovered
-Markdown with Hexo and diff every article body against the original page.
-`verify` does exactly that and prints one line per post. On the 25-post site
-this was built for, 24 of 24 public posts came back identical in text and
-structure. If a post of yours does not, the report tells you which one and the
-first place it differs.
-
-**What is genuinely gone** and cannot come back from HTML:
-
-- Source formatting — blank lines, which list marker you used, whether a code
-  block was fenced with `` ``` `` or `~~~`. The recovered Markdown is
-  equivalent, not byte-identical to what you typed.
-- Raw HTML you wrote inside a post. It survives as HTML in the Markdown, which
-  Hexo accepts.
-- Drafts, and anything the theme never rendered.
-- Theme settings that leave no trace on the page. Everything that *is* visible
-  — menu, links, avatar, excerpt length, counters — is read back.
+Hexo's HTML is a deterministic rendering of the Markdown, so the structure can
+be read back — as long as the converter knows the exact shapes Hexo and NexT
+emit (line-numbered code tables, heading anchors, headings inside list items)
+instead of treating it as generic HTML. `verify` then renders the recovered
+sources and diffs every post against the original; it exits 0 only when text
+and structure match. What HTML cannot give back: your source formatting (blank
+lines, list markers), drafts, and theme settings that leave no trace on the page.
 
 ## Example
 
@@ -117,17 +84,18 @@ And a post page becomes a post file:
 
 ```markdown
 ---
-title: "从零开始的编译原理之旅----Parser篇(四)"
+title: "Writing a Recursive Descent Parser"
 date: 2018-09-06 21:39:10
 categories:
-  - "编译原理"
+  - "Compilers"
 tags:
   - "parser"
 ---
 
-本篇主要阐述使用递归下降非回溯或回溯解析LL(1)文法，并比较两者优缺点
+This post walks through parsing an LL(1) grammar by recursive descent, with
+and without backtracking, and compares the two.
 
-### 1 目录
+### 1 Contents
 …
 ```
 
@@ -196,4 +164,4 @@ useful kind. Every fidelity rule above started as one of those.
 
 ## License
 
-[MIT](LICENSE) © 2026 Jason Zhu
+[MIT](LICENSE)
