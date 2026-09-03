@@ -1,13 +1,9 @@
-# Publishes on a v* tag: the npm package (primary -- Hexo users have Node) and
-# the Python package. Both use OIDC "trusted publishing"; no token is stored.
+# Publishes the npm package on a v* tag, through npm's OIDC trusted publishing;
+# no token is stored anywhere.
 #
-# One-time setup:
-#   npm : the package must exist first (the initial `npm publish` is done by
-#         hand); then npmjs.com -> package -> Settings -> Trusted publisher:
-#         GitHub Actions, repo Belyenochi/hexo-recover, workflow release.yml.
-#   PyPI: pypi.org -> Publishing -> add pending publisher for project
-#         hexo-recover: owner Belyenochi, repo hexo-recover, workflow
-#         release.yml, environment pypi.
+# One-time setup: the package must exist first (the initial `npm publish` is
+# done by hand), then npmjs.com -> package -> Settings -> Trusted publisher:
+# GitHub Actions, repository Belyenochi/hexo-recover, workflow release.yml.
 name: Release
 
 on:
@@ -22,17 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.12"
       - run: npm ci && npm test
-      - run: cd python && uv sync --extra dev && uv run pytest -q
-      - name: tag must match both package versions
+      - name: tag must match the package version
         run: |
-          js=$(node -p "require('./package.json').version")
-          py=$(cd python && uv run python -c "import hexo_recover; print(hexo_recover.__version__)")
-          [ "v$js" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package.json v$js"; exit 1; }
-          [ "$js" = "$py" ] || { echo "package.json $js != python $py"; exit 1; }
+          v=$(node -p "require('./package.json').version")
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package.json v$v"; exit 1; }
 
   npm:
     needs: check
@@ -48,17 +38,3 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm publish --provenance --access public
-
-  pypi:
-    needs: check
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: cd python && uv build
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: python/dist/

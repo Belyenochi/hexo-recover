@@ -14,8 +14,7 @@
   "files": ["src/", "README.md", "CHANGELOG.md", "LICENSE"],
   "engines": { "node": ">=20" },
   "scripts": {
-    "test": "node --test",
-    "parity": "node scripts/parity.js"
+    "test": "node --test"
   },
   "dependencies": {
     "cheerio": "^1.2.0"

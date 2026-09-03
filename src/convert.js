@@ -10,9 +10,7 @@
  *
  * Every rule here was earned against a real 25-post site, rendered back
  * through Hexo and diffed against the original HTML until every article body
- * matched. Comments say which rule fixed which failure. The Python
- * implementation in python/ is the reference; scripts/parity.js checks the two
- * produce byte-identical Markdown.
+ * matched. Comments say which rule fixed which failure.
  *
  * Nodes are domhandler nodes as produced by cheerio: {type, name, attribs,
  * children, prev, next, data}.

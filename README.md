@@ -1,7 +1,6 @@
 # hexo-recover
 
 [![npm](https://img.shields.io/npm/v/hexo-recover.svg)](https://www.npmjs.com/package/hexo-recover)
-[![PyPI](https://img.shields.io/pypi/v/hexo-recover.svg)](https://pypi.org/project/hexo-recover/)
 [![CI](https://github.com/Belyenochi/hexo-recover/actions/workflows/ci.yml/badge.svg)](https://github.com/Belyenochi/hexo-recover/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -66,19 +65,13 @@ images, links, code blocks, emphasis) matches.
 `PATH` is the post's URL path, e.g. `2021/05/19/love`. Both lists end up in the
 report, so the decision to leave something out is on file.
 
-### Python
-
-The same tool is on PyPI — `pip install hexo-recover` — with the same commands
-and flags. The two implementations are kept byte-for-byte equivalent: CI runs
-both on the same input and fails if a single post or config file differs.
-
 ## What it gets right that generic HTML→Markdown tools do not
 
 Hexo renders code as a `<table>` with a line-number gutter; headings carry
 anchor links; headings and hard breaks appear inside list items; `*`, `_`,
 `###`, `1.` and `~` occur as literal text; CommonMark refuses emphasis that old
 renderers accepted. Each of these is handled, and each rule is pinned by a unit
-test in both languages. The converter escapes only what would change meaning,
+test. The converter escapes only what would change meaning,
 so the recovered Markdown stays pleasant to edit — which is the point of
 recovering it.
 
@@ -93,9 +86,7 @@ recovering it.
 ## Development
 
 ```sh
-npm install && npm test                       # JavaScript
-cd python && python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]' && pytest
-node scripts/parity.js <site-dir>             # both implementations, byte-identical output
+npm install && npm test
 ```
 
 MIT.
