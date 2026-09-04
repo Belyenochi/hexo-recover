@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.0 — 2026-09-04
+
+- Theme presets for Butterfly, Fluid, Icarus, Volantis, Stellar, Keep, Redefine
+  and Landscape, next to NexT; each derived from a site generated with the
+  theme's current release and pinned by a fixture test. `--theme` now defaults
+  to auto-detection.
+- Title, dates, tags, site name and author are read from the Open Graph tags
+  and JSON-LD Hexo writes into every page, theme markup second. Local times are
+  recovered when the page shows one; otherwise the exact UTC instant is written.
+- Code blocks whose lines are separated by `<br>` (Fluid) convert correctly.
+- `verify` detects the theme of each side, so the original and the rebuilt site
+  may run different themes; inline `<code>` is still compared, highlighted-block
+  internals are not.
+- Index excerpt length is measured against the post each card links to, so
+  themes without a read-more button are measured too.
+
 ## 0.1.1 — 2026-09-03
 
 No code changes. First release published by the GitHub Actions workflow through

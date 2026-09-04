@@ -1,6 +1,6 @@
 {
   "name": "hexo-recover",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Rebuild the Markdown sources of a Hexo blog from its generated HTML, and prove the rebuild is faithful.",
   "keywords": [
     "hexo",
@@ -8,7 +8,10 @@
     "markdown",
     "recovery",
     "html-to-markdown",
-    "next-theme"
+    "next-theme",
+    "butterfly",
+    "fluid",
+    "icarus"
   ],
   "license": "MIT",
   "author": "Jason Zhu",

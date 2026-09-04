@@ -20,13 +20,24 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as cheerio from 'cheerio';
+import { THEMES, detectTheme } from './themes.js';
 
+// Counted inside the body. <span> is not, and <code> only outside highlighted
+// blocks: themes rewrite code blocks differently (Fluid drops span.line and adds
+// <code class="hljs">), and the two sites being compared may run different themes.
 const TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'table', 'img', 'a',
-  'figure.highlight', 'pre', 'code', 'strong', 'em', 'blockquote'];
+  'figure.highlight', 'pre', 'strong', 'em', 'blockquote'];
 
+/**
+ * The article body of a page. With no selector given, the page's theme is
+ * detected, so the original and the rebuilt site need not share a theme.
+ */
 function body(p, selector) {
-  const $ = cheerio.load(fs.readFileSync(p, 'utf8'));
-  const el = $(selector).first();
+  const html = fs.readFileSync(p, 'utf8');
+  const $ = cheerio.load(html);
+  const css = selector || THEMES[detectTheme($, html)]?.body;
+  if (!css) return null;
+  const el = $(css).first();
   return el.length ? { $, el } : null;
 }
 
@@ -36,7 +47,12 @@ function text({ $, el }) {
   return el.text().replace(/\s+/g, ' ').trim();
 }
 
-const struct = ({ el }) => Object.fromEntries(TAGS.map((k) => [k, el.find(k).length]));
+const struct = ({ $, el }) => {
+  const out = Object.fromEntries(TAGS.map((k) => [k, el.find(k).length]));
+  // Inline code only; the <code> inside highlighted blocks is theme markup.
+  out.code = el.find('code').filter((_, c) => !$(c).closest('figure.highlight').length).length;
+  return out;
+};
 
 /** difflib.SequenceMatcher(None, a, b, autojunk=False).ratio() */
 export function ratio(a, b) {
@@ -90,7 +106,7 @@ function* postPages(root) {
   yield* walk(root, 0);
 }
 
-export function verify(origDir, newDir, bodySelector = '.post-body', log = console.log) {
+export function verify(origDir, newDir, bodySelector = null, log = console.log) {
   const orig = path.resolve(origDir);
   const nw = path.resolve(newDir);
   const rows = [];
@@ -101,14 +117,14 @@ export function verify(origDir, newDir, bodySelector = '.post-body', log = conso
     if (!fs.existsSync(old)) { rows.push([rel, null, false, 'not in original']); continue; }
     const eo = body(old, bodySelector);
     const en = body(page, bodySelector);
-    if (!eo || !en) { rows.push([rel, null, false, `no ${bodySelector}`]); continue; }
+    if (!eo || !en) { rows.push([rel, null, false, bodySelector ? `no ${bodySelector}` : 'theme not recognised; pass --body-selector']); continue; }
     const sa = struct(eo);
     const sb = struct(en);
     const a = text(eo);
     const b = text(en);
     rows.push([rel, ratio(a, b), a.split(' ').join('') === b.split(' ').join(''), '']);
     const d = {};
-    for (const k of TAGS) if (sa[k] !== sb[k]) d[k] = [sa[k], sb[k]];
+    for (const k of Object.keys(sa)) if (sa[k] !== sb[k]) d[k] = [sa[k], sb[k]];
     if (Object.keys(d).length) badStruct.push([rel, d]);
   }
   const scored = rows.filter((r) => r[1] !== null);

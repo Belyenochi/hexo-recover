@@ -42,12 +42,15 @@ Requires Node ≥ 20.
 <p align="center"><img alt="recover, generate, verify" src="docs/flow.svg" width="900"></p>
 
 Hexo's HTML is a deterministic rendering of the Markdown, so the structure can
-be read back — as long as the converter knows the exact shapes Hexo and NexT
-emit (line-numbered code tables, heading anchors, headings inside list items)
-instead of treating it as generic HTML. `verify` then renders the recovered
-sources and diffs every post against the original; it exits 0 only when text
-and structure match. What HTML cannot give back: your source formatting (blank
-lines, list markers), drafts, and theme settings that leave no trace on the page.
+be read back — as long as the converter knows the exact shapes Hexo emits
+(line-numbered code tables, heading anchors, headings inside list items)
+instead of treating it as generic HTML. The article body is the same for every
+theme; only the wrapper around it differs, and the theme is detected from that
+wrapper. Title, dates and tags come from the Open Graph tags Hexo writes into
+every page. `verify` then renders the recovered sources and diffs every post
+against the original; it exits 0 only when text and structure match. What HTML
+cannot give back: your source formatting (blank lines, list markers), drafts,
+and theme settings that leave no trace on the page.
 
 ## Example
 
@@ -120,13 +123,41 @@ blog/
 | `--url URL` | Site URL for `_config.yml`. Default: `<link rel=canonical>` if present |
 | `--private PATH=WHY` | Write this post to `_private/` (gitignored) instead of publishing it. Repeatable |
 | `--drop PATH=WHY` | Leave this post out entirely. Repeatable |
-| `--theme next\|landscape` | Selector preset for the theme's post markup. Default `next` |
-| `--body-selector CSS` | Override the article-body selector for another theme |
-| `--title-selector CSS` | Override the article-title selector |
+| `--theme NAME` | Theme that generated the site. Default: detect it from the first post page |
+| `--body-selector CSS` | Article-body selector, for a theme not in the list below |
+| `--title-selector CSS` | Article-title selector, likewise |
 | `--post-glob GLOB` | Where post pages live. Default `YYYY/MM/DD/slug/index.html` |
 
 `PATH` is the post's URL path, e.g. `2021/05/19/love`. Excluded posts are listed
 in the report, so the decision is on file.
+
+## Themes
+
+Detected automatically. Each one has a fixture site in `test/fixtures/themes`,
+generated with the theme's current release, and the tests recover it and
+`verify` it against the NexT rendering of the same posts.
+
+| Theme | Post body, title, dates, categories, tags | Menu, avatar, social links |
+|---|---|---|
+| [NexT](https://github.com/next-theme/hexo-theme-next) | yes | yes |
+| [Butterfly](https://github.com/jerryc127/hexo-theme-butterfly) | yes | avatar, social |
+| [Fluid](https://github.com/fluid-dev/hexo-theme-fluid) | yes | menu |
+| [Icarus](https://github.com/ppoffice/hexo-theme-icarus) | yes | menu |
+| [Volantis](https://github.com/volantis-x/hexo-theme-volantis) | yes | yes |
+| [Stellar](https://github.com/xaoxuu/hexo-theme-stellar) | yes | avatar |
+| [Keep](https://github.com/XPoet/hexo-theme-keep) | yes | menu, avatar |
+| [Redefine](https://github.com/EvanNotFound/hexo-theme-redefine) | yes | menu, avatar |
+| [Landscape](https://github.com/hexojs/hexo-theme-landscape) | yes | menu |
+
+Dates: when the theme prints the post's local time (or a timestamp with a
+timezone offset), the front matter gets that. Butterfly, Icarus and Landscape
+show only the day, so their posts get the exact instant in ISO form
+(`2018-09-06T13:39:10.000Z`); set `timezone:` in `_config.yml` to the original
+site's zone so the days in the permalinks come out the same.
+
+Another theme: run with `--body-selector` pointing at the article body. The
+metadata still comes from the Open Graph tags. Open an issue with one post page
+and the index page and it can become a preset.
 
 ## Fidelity rules
 
@@ -135,6 +166,7 @@ Each of these is a real case from a recovered site, pinned by a test:
 | Hexo markup | Handling |
 |---|---|
 | Code as `<table>` with a line-number gutter | Lines reassembled from `span.line`, fenced with the language |
+| Code lines separated by `<br>` instead of `span.line` (Fluid) | Split on the `<br>` |
 | Bare `<pre><code>` (indented code, never highlighted) | Emitted indented, so it stays plain |
 | Heading anchors `<a class="headerlink">` | Dropped |
 | `<li><h5>` — heading inside a list item | Own indented line |
@@ -146,8 +178,8 @@ Each of these is a real case from a recovered site, pinned by a test:
 
 ## Limitations
 
-- Menu and social-link extraction understands the NexT sidebar. Other themes
-  get correct posts and a default theme config.
+- The theme config written is always NexT 8's; menu, avatar and social links
+  read from another theme are carried over into it.
 - Posts are found by the date-based permalink shape unless `--post-glob` says otherwise.
 - `verify` needs the rebuilt site; it does not run Hexo for you.
 

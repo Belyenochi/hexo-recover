@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { createRequire } from 'node:module';
-import { THEME_PRESETS, defaultOptions, recover } from './recover.js';
+import { defaultOptions, recover } from './recover.js';
+import { THEME_NAMES } from './themes.js';
 import { verify } from './verify.js';
 
 const { version } = createRequire(import.meta.url)('../package.json');
@@ -13,14 +14,15 @@ Rebuild a Hexo project from its generated HTML, and verify the rebuild.
       --url URL                site URL for _config.yml (default: <link rel=canonical>, else example.com)
       --private PATH[=WHY]     write this post to _private/ instead of source/_posts/ (repeatable)
       --drop PATH[=WHY]        leave this post out entirely (repeatable)
-      --theme next|landscape   selector preset for the theme's post markup (default: next)
-      --body-selector CSS      article body selector; overrides the preset
-      --title-selector CSS     article title selector; overrides the preset
+      --theme NAME             theme that generated the site (default: auto-detect)
+                               one of ${THEME_NAMES.join(', ')}
+      --body-selector CSS      article body selector; overrides the theme's
+      --title-selector CSS     article title selector; overrides the theme's
       --post-glob GLOB         where post pages live (default: YYYY/MM/DD/slug/index.html)
 
   hexo-recover verify <original> <regenerated> [--body-selector CSS]
       exits 0 only when every post body is identical once spaces are removed and
-      every structural tag count matches
+      every structural tag count matches; the two sites may use different themes
 
 PATH is the post's URL path, e.g. 2021/05/19/love.`;
 
@@ -45,21 +47,24 @@ export function main(argv = process.argv.slice(2)) {
       args: argv.slice(1), allowPositionals: true,
       options: {
         url: { type: 'string' }, private: { type: 'string', multiple: true }, drop: { type: 'string', multiple: true },
-        theme: { type: 'string', default: 'next' }, 'body-selector': { type: 'string' },
+        theme: { type: 'string', default: 'auto' }, 'body-selector': { type: 'string' },
         'title-selector': { type: 'string' }, 'post-glob': { type: 'string' },
       },
     });
     if (positionals.length !== 2) { console.error(USAGE); return 2; }
-    if (!THEME_PRESETS[v.theme]) { console.error(`unknown --theme ${v.theme}; one of ${Object.keys(THEME_PRESETS).join(', ')}`); return 2; }
+    if (v.theme !== 'auto' && !THEME_NAMES.includes(v.theme)) {
+      console.error(`unknown --theme ${v.theme}; one of auto, ${THEME_NAMES.join(', ')}`);
+      return 2;
+    }
     const opt = defaultOptions();
     opt.url = v.url || null;
     opt.private = kv(v.private);
     opt.drop = kv(v.drop);
-    opt.selectors = { ...THEME_PRESETS[v.theme] };
-    if (v['body-selector']) opt.selectors.body = v['body-selector'];
-    if (v['title-selector']) opt.selectors.title = v['title-selector'];
+    opt.theme = v.theme;
+    opt.selectors = { body: v['body-selector'], title: v['title-selector'] };
     if (v['post-glob']) opt.postGlob = v['post-glob'];
-    const rep = recover(positionals[0], positionals[1], opt);
+    let rep;
+    try { rep = recover(positionals[0], positionals[1], opt); } catch (e) { console.error(e.message); return 1; }
     const f = rep.site;
     console.log(`public posts : ${rep.public.length}`);
     console.log(`private posts: ${rep.private.length}`);
@@ -75,10 +80,10 @@ export function main(argv = process.argv.slice(2)) {
   if (cmd === 'verify') {
     const { values: v, positionals } = parseArgs({
       args: argv.slice(1), allowPositionals: true,
-      options: { 'body-selector': { type: 'string', default: '.post-body' } },
+      options: { 'body-selector': { type: 'string' } },
     });
     if (positionals.length !== 2) { console.error(USAGE); return 2; }
-    return verify(positionals[0], positionals[1], v['body-selector']);
+    return verify(positionals[0], positionals[1], v['body-selector'] || null);
   }
 
   console.error(`unknown command ${cmd}\n\n${USAGE}`);

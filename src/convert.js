@@ -38,6 +38,16 @@ export function getText(n) {
   return s;
 }
 
+/** getText, but a <br> is a newline. For code whose lines are separated by <br> only. */
+function getTextBr(n) {
+  if (isText(n)) return n.data;
+  if (isTag(n) && n.name === 'br') return '\n';
+  if (!n.children) return '';
+  let s = '';
+  for (const c of n.children) s += getTextBr(c);
+  return s;
+}
+
 function findFirst(n, pred) {
   if (!n.children) return null;
   for (const c of n.children) {
@@ -127,7 +137,9 @@ export class Converter {
       code = pre ? getText(pre) : getText(fig);
     } else {
       const lines = findAll(codeTd, (c) => isTag(c) && c.name === 'span' && classes(c).includes('line'));
-      code = lines.length ? lines.map((l) => getText(l)).join('\n') : getText(codeTd);
+      // Fluid strips span.line and separates lines with <br>; plain getText
+      // would run the lines together.
+      code = lines.length ? lines.map((l) => getText(l)).join('\n') : getTextBr(codeTd);
     }
     code = code.replace(/\n+$/, '');
     let fence = '```';
